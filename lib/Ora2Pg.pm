@@ -34,7 +34,7 @@ use Time::HiRes qw/usleep/;
 use Fcntl qw/ :flock /;
 use IO::Handle;
 use IO::Pipe;
-use Data::Dumper;
+#use Data::Dumper;
 #set locale to LC_NUMERIC C
 setlocale(LC_NUMERIC,"C");
 
@@ -5973,7 +5973,6 @@ WHERE
 	my %parts = ();
 	my %default = ();
 	while (my $row = $sth->fetch) {
-
 		# forget or not this object if it is in the exclude or allow lists.
 		next if ($self->skip_this_object('PARTITION', $row->[2]));
 
@@ -5986,7 +5985,6 @@ WHERE
 	}
 	$sth->finish;
 	$self->logit("\n", 1);
-
 	return \%parts, \%default;
 }
 
@@ -6057,7 +6055,6 @@ WHERE a.table_name = b.table_name
 		}
 	}
 	$str .= "ORDER BY a.table_name\n";
-
 	my $sth = $self->{dbh}->prepare($str) or $self->logit("FATAL: " . $self->{dbh}->errstr . "\n", 0, 1);
 	$sth->execute or $self->logit("FATAL: " . $self->{dbh}->errstr . "\n", 0, 1);
 

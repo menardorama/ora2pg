@@ -5241,7 +5241,6 @@ AND $self->{prefix}_INDEXES.TEMPORARY <> 'Y'
 ORDER BY $self->{prefix}_IND_COLUMNS.COLUMN_POSITION
 END
 	}
-
 	$sth->execute or $self->logit("FATAL: " . $self->{dbh}->errstr . "\n", 0, 1);
 	my $idxnc = qq{SELECT IE.COLUMN_EXPRESSION FROM $self->{prefix}_IND_EXPRESSIONS IE, $self->{prefix}_IND_COLUMNS IC
 WHERE  IE.INDEX_OWNER = IC.INDEX_OWNER
@@ -5271,7 +5270,7 @@ $idxowner
 		}
 		# Replace function based index type
 		if ($row->[1] =~ /^SYS_NC/i) {
-			$sth2->execute($row->[1],$row->[-3]) or $self->logit("FATAL: " . $self->{dbh}->errstr . "\n", 0, 1);
+			$sth2->execute($row->[1],$row->[-4]) or $self->logit("FATAL: " . $self->{dbh}->errstr . "\n", 0, 1);
 			my $nc = $sth2->fetch();
 			$row->[1] = $nc->[0];
 		}
@@ -5964,8 +5963,10 @@ WHERE
 			$str .= "\tAND a.table_owner NOT IN ('" . join("','", @{$self->{sysusers}}) . "')\n";
 		}
 	}
-	$str .= "ORDER BY a.table_name,a.partition_position,c.column_position\n";
+	
+	$str .= "\tAND a.table_name='$table_name'\n";
 
+	$str .= "ORDER BY a.table_name,a.partition_position,c.column_position\n";
 	my $sth = $self->{dbh}->prepare($str) or $self->logit("FATAL: " . $self->{dbh}->errstr . "\n", 0, 1);
 	$sth->execute or $self->logit("FATAL: " . $self->{dbh}->errstr . "\n", 0, 1);
 

@@ -221,6 +221,7 @@ CONFIGURATION
                 -u | --user name  : Used to set the Oracle database connection user.
                 -v | --version    : Show Ora2Pg Version and exit.
                 -w | --password pwd : Used to set the password of the Oracle database user.
+		--table_name      : Specify this to export only one table (usefull when you have a big Oracle catalog)
                 --forceowner: if set to 1 force ora2pg to set tables and sequences owner
                               like in Oracle database. If the value is set to a username this
                               one will be used as the objects owner. By default it's the user

@@ -34,10 +34,11 @@ use Time::HiRes qw/usleep/;
 use Fcntl qw/ :flock /;
 use IO::Handle;
 use IO::Pipe;
-
+use Data::Dumper;
 #set locale to LC_NUMERIC C
 setlocale(LC_NUMERIC,"C");
 
+$table_name = '';
 $VERSION = '12.1';
 $PSQL = $ENV{PLSQL} || 'psql';
 
@@ -667,7 +668,6 @@ sub _init
 
 	# Autodetect spatial type
 	$self->{autodetect_spatial_type} ||= 0;
-
 	# Overwrite configuration with all given parameters
 	# and try to preserve backward compatibility
 	foreach my $k (keys %options) {
@@ -675,6 +675,8 @@ sub _init
 			$self->{limited} = ();
 			push(@{$self->{limited}}, split(/[\s\t;,]+/, $options{allow}) );
 		# preserve backward compatibility
+		} elsif ($options{table_name} && (lc($k) eq 'table_name')) {
+			$table_name = $options{table_name};
 		} elsif ($options{tables} && (lc($k) eq 'tables')) {
 			$self->{limited} = ();
 			push(@{$self->{limited}}, split(/[\s\t;,]+/, $options{tables}) );
@@ -1222,7 +1224,7 @@ sub _tables
 	# Get detailed informations on each tables
 	if (!$nodetail) {
 		# Retrieve all column's details
-		my %columns_infos = $self->_column_info('',$self->{schema});
+		my %columns_infos = $self->_column_info($table_name,$self->{schema});
 		foreach my $tb (keys %columns_infos) {
 			next if (!exists $tables_infos{$tb});
 			foreach my $c (keys %{$columns_infos{$tb}}) {
@@ -1232,7 +1234,7 @@ sub _tables
 		%columns_infos = ();
 
 		# Retrieve comment of each columns
-		my %columns_comments = $self->_column_comments('',$self->{schema});
+		my %columns_comments = $self->_column_comments($table_name,$self->{schema});
 		foreach my $tb (keys %columns_comments) {
 			next if (!exists $tables_infos{$tb});
 			foreach my $c (keys %{$columns_comments{$tb}}) {
@@ -1242,7 +1244,7 @@ sub _tables
 
 		# Extract foreign keys informations
 		if (!$self->{skip_fkeys}) {
-			my ($foreign_link, $foreign_key) = $self->_foreign_key('',$self->{schema});
+			my ($foreign_link, $foreign_key) = $self->_foreign_key($table_name,$self->{schema});
 			foreach my $tb (keys %{$foreign_link}) {
 				next if (!exists $tables_infos{$tb});
 				%{$self->{tables}{$tb}{foreign_link}} =  %{$foreign_link->{$tb}};
@@ -1255,7 +1257,7 @@ sub _tables
 	}
 
 	# Retrieve all unique keys informations
-	my %unique_keys = $self->_unique_key('',$self->{schema});
+	my %unique_keys = $self->_unique_key($table_name,$self->{schema});
 	foreach my $tb (keys %unique_keys) {
 		next if (!exists $tables_infos{$tb});
 		foreach my $c (keys %{$unique_keys{$tb}}) {
@@ -1266,7 +1268,7 @@ sub _tables
 
 	# Retrieve check constraints
 	if (!$self->{skip_checks}) {
-		my %check_constraints = $self->_check_constraint('',$self->{schema});
+		my %check_constraints = $self->_check_constraint($table_name,$self->{schema});
 		foreach my $tb (keys %check_constraints) {
 			next if (!exists $tables_infos{$tb});
 			%{$self->{tables}{$tb}{check_constraint}} = ( %{$check_constraints{$tb}});
@@ -1275,7 +1277,7 @@ sub _tables
 
 	# Retrieve all indexes informations
 	if (!$self->{skip_indices} && !$self->{skip_indexes}) {
-		my ($uniqueness, $indexes, $idx_type, $idx_tbsp) = $self->_get_indexes('',$self->{schema});
+		my ($uniqueness, $indexes, $idx_type, $idx_tbsp) = $self->_get_indexes($table_name,$self->{schema});
 		foreach my $tb (keys %{$uniqueness}) {
 			next if (!exists $tables_infos{$tb});
 			%{$self->{tables}{$tb}{uniqueness}} = %{$uniqueness->{$tb}};
@@ -4776,7 +4778,6 @@ sub _column_info
 	$condition .= "AND TABLE_NAME='$table' " if ($table);
 	$condition .= "AND OWNER='$owner' " if ($owner);
 	$condition =~ s/^AND/WHERE/;
-
 	my $sth = '';
 	if ($self->{db_version} !~ /Release 8/) {
 		$sth = $self->{dbh}->prepare(<<END);
